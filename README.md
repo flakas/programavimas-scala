@@ -1,2 +1,2 @@
-scala-class
+Programavimas Scala 2014
 ===========
