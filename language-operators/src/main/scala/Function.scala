@@ -6,7 +6,7 @@ abstract class Op {
 case class Var(name: String) extends Op {
     def compute(x: Int) = x
 }
-case class Integer(value: String) extends Op {
+case class Constant(value: String) extends Op {
     def compute(x: Int) = value.toInt
 }
 case class Modulo(op1: Op, op2: Op) extends Op {
@@ -21,7 +21,7 @@ object Function {
         try {
             s.toInt.isInstanceOf[Int]
         } catch {
-            case e:Exception => false
+            case e: Exception => false
         }
     }
     def parse(s: String) = {
@@ -33,18 +33,28 @@ object Function {
                 val components = s.split("%").map(_.trim)
                 Modulo(parseBody(components(0)), parseBody(components(1)))
             } else if (isInt(s) == true) {
-                Integer(s)
+                Constant(s)
             } else {
                 Var(s)
             }
         }
-        val s2 = s.split("=>").map(_.trim)
-        (x : Int) => {
-            try {
-                parseBody(s2(1)).compute(x)
-            } catch {
-                case ex: ArithmeticException => false
-            }
+        val functionComponents = s.split("=>").map(_.trim)
+        if (functionComponents.length != 2) {
+            None
+        } else {
+            val emulatedFunction = parseBody(functionComponents(1))
+            Some((x : Int) => {
+                if (-100 <= x && x <= 100) {
+                    // Limit acceptable arguments to interval [-100, 100]
+                    try {
+                        Some(emulatedFunction.compute(x))
+                    } catch {
+                        case e: ArithmeticException => None
+                    }
+                } else {
+                    None
+                }
+            })
         }
     }
 }
