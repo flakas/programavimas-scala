@@ -25,36 +25,68 @@ object Function {
         }
     }
     def parse(s: String) = {
-        def parseBody(s: String) : Op = {
+        def parseHead(s: String) = {
+            val argument = s.slice(s.indexOf("(")+1, s.indexOf(")"))
+            val components = argument.split(":").map(_.trim)
+            components match {
+                case Array(name, "Int") => name
+                case _ => None
+            }
+        }
+        def parseBody(s: String, variableName: String) : Option[Op] = {
             if (s.indexOf("-") != -1) {
                 val components = s.split("-").map(_.trim)
-                Subtract(parseBody(components(0)), parseBody(components(1)))
+                components.map(parseBody(_, variableName)) match {
+                    case Array(Some(value1), Some(value2)) => Some(Subtract(value1, value2))
+                    case _ => None
+                }
+                //Subtract(parseBody(components(0)), parseBody(components(1)))
             } else if (s.indexOf("%") != -1) {
                 val components = s.split("%").map(_.trim)
-                Modulo(parseBody(components(0)), parseBody(components(1)))
+                //val v1 = parseBody(components(0))
+                //val v2 = parseBody(components(1))
+                components.map(parseBody(_, variableName)) match {
+                    case Array(Some(value1), Some(value2)) => Some(Modulo(value1, value2))
+                    case _ => None
+                }
             } else if (isInt(s) == true) {
-                Constant(s)
+                Some(Constant(s))
             } else {
-                Var(s)
+                if (s == variableName) {
+                    Some(Var(s))
+                } else {
+                    None
+                }
             }
         }
         val functionComponents = s.split("=>").map(_.trim)
         if (functionComponents.length != 2) {
             None
         } else {
-            val emulatedFunction = parseBody(functionComponents(1))
-            Some((x : Int) => {
-                if (-100 <= x && x <= 100) {
-                    // Limit acceptable arguments to interval [-100, 100]
-                    try {
-                        Some(emulatedFunction.compute(x))
-                    } catch {
-                        case e: ArithmeticException => None
+            val functionArgumentName = parseHead(functionComponents(0))
+            functionArgumentName match {
+                case variableName: String => {
+                    val emulatedFunction = parseBody(functionComponents(1), variableName)
+                    emulatedFunction match {
+                        case Some(f) => {
+                            Some((x : Int) => {
+                                if (-100 <= x && x <= 100) {
+                                    // Limit acceptable arguments to interval [-100, 100]
+                                    try {
+                                        Some(f.compute(x))
+                                    } catch {
+                                        case e: ArithmeticException => None
+                                    }
+                                } else {
+                                    None
+                                }
+                            })
+                        }
+                        case _ => None
                     }
-                } else {
-                    None
                 }
-            })
+                case _ => None
+            }
         }
     }
 }
