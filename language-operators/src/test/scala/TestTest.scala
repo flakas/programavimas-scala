@@ -50,6 +50,12 @@ class TestFunction extends FunSuite with Checkers {
         expect(None) { Function.parse("(x: Int) => x - y % 10") }
     }
 
+    test("arithmetic function order is correct") {
+        expect(Some(3)) {
+            Function.parse("(x: Int) => 4 - x % 2").flatMap((f: (Int => Option[Int])) => f(5))
+        }
+    }
+
     val argumentNames = Gen.identifier.suchThat(!_.isEmpty)
     val argumentValues = Gen.choose(-100, 100)
     val nonZeroArgumentValues = argumentValues.suchThat(_ != 0)
