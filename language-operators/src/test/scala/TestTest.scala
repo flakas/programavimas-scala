@@ -50,13 +50,61 @@ class TestFunction extends FunSuite with Checkers {
         expect(None) { Function.parse("(x: Int) => x - y % 10") }
     }
 
-    test("'var % const - const' class function computes properly") {
-        val argumentNames = Gen.identifier.suchThat(_ != "")
-        val argumentValues = Gen.choose(-100, 100)
-        check(Prop.forAll(argumentNames, argumentValues) {
-            (arg: String, param: Int) => {
-                val func = Function.parse("(" + arg + ": Int) => " + arg + " % 101 - 0")
-                (func.flatMap((f: (Int => Option[Int])) => f(param))) == Some(param)
+    val argumentNames = Gen.identifier.suchThat(!_.isEmpty)
+    val argumentValues = Gen.choose(-100, 100)
+    val nonZeroArgumentValues = argumentValues.suchThat(_ != 0)
+    val constants = Gen.choose(1, 10)
+
+    test("Functions of class 'var % const - const' compute properly with valid inputs") {
+        check(Prop.forAll(argumentNames, constants, constants, argumentValues) {
+            (arg: String, c1: Int, c2: Int, param: Int) => {
+                val func = Function.parse(("(%s : Int) => %s %% %d - %d").format(arg, arg, c1, c2))
+                func.flatMap((f: (Int => Option[Int])) => f(param)) == Some(param % c1 - c2)
+            }
+        })
+    }
+
+    test("Functions of class 'const % var - const' compute properly with valid inputs") {
+        check(Prop.forAll(argumentNames, constants, constants, nonZeroArgumentValues) {
+            (arg: String, c1: Int, c2: Int, param: Int) => {
+                val func = Function.parse(("(%s : Int) => %d %% %s - %d").format(arg, c1, arg, c2))
+                func.flatMap((f: (Int => Option[Int])) => f(param)) == Some(c1 % param - c2)
+            }
+        })
+    }
+
+    test("Functions of class 'const % const - var' compute properly with valid inputs") {
+        check(Prop.forAll(argumentNames, constants, constants, argumentValues) {
+            (arg: String, c1: Int, c2: Int, param: Int) => {
+                val func = Function.parse(("(%s : Int) => %d %% %d - %s").format(arg, c1, c2, arg))
+                func.flatMap((f: (Int => Option[Int])) => f(param)) == Some(c1 % c2 - param)
+            }
+        })
+    }
+
+    test("Functions of class 'var % const - var' compute properly with valid inputs") {
+        check(Prop.forAll(argumentNames, constants, argumentValues) {
+            (arg: String, c1: Int, param: Int) => {
+                val func = Function.parse(("(%s : Int) => %s %% %d - %s").format(arg, arg, c1, arg))
+                func.flatMap((f: (Int => Option[Int])) => f(param)) == Some(param % c1 - param)
+            }
+        })
+    }
+
+    test("Functions of class 'const % var - var' compute properly with valid inputs") {
+        check(Prop.forAll(argumentNames, constants, nonZeroArgumentValues) {
+            (arg: String, c1: Int, param: Int) => {
+                val func = Function.parse(("(%s : Int) => %d %% %s - %s").format(arg, c1, arg, arg))
+                func.flatMap((f: (Int => Option[Int])) => f(param)) == Some(c1 % param - param)
+            }
+        })
+    }
+
+    test("Functions of class 'var - const % var' compute properly with valid inputs") {
+        check(Prop.forAll(argumentNames, constants, nonZeroArgumentValues) {
+            (arg: String, c1: Int, param: Int) => {
+                val func = Function.parse(("(%s : Int) => %s - %d %% %s").format(arg, arg, c1, arg))
+                func.flatMap((f: (Int => Option[Int])) => f(param)) == Some(param - c1 % param)
             }
         })
     }
