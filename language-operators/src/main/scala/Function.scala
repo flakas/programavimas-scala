@@ -29,7 +29,7 @@ object Function {
             val argument = s.slice(s.indexOf("(")+1, s.indexOf(")"))
             val components = argument.split(":").map(_.trim)
             components match {
-                case Array(name, "Int") => name
+                case Array(name, "Int") => Some(name)
                 case _ => None
             }
         }
@@ -40,11 +40,8 @@ object Function {
                     case Array(Some(value1), Some(value2)) => Some(Subtract(value1, value2))
                     case _ => None
                 }
-                //Subtract(parseBody(components(0)), parseBody(components(1)))
             } else if (s.indexOf("%") != -1) {
                 val components = s.split("%").map(_.trim)
-                //val v1 = parseBody(components(0))
-                //val v2 = parseBody(components(1))
                 components.map(parseBody(_, variableName)) match {
                     case Array(Some(value1), Some(value2)) => Some(Modulo(value1, value2))
                     case _ => None
@@ -60,33 +57,26 @@ object Function {
             }
         }
         val functionComponents = s.split("=>").map(_.trim)
-        if (functionComponents.length != 2) {
-            None
-        } else {
-            val functionArgumentName = parseHead(functionComponents(0))
-            functionArgumentName match {
-                case variableName: String => {
-                    val emulatedFunction = parseBody(functionComponents(1), variableName)
-                    emulatedFunction match {
-                        case Some(f) => {
-                            Some((x : Int) => {
-                                if (-100 <= x && x <= 100) {
-                                    // Limit acceptable arguments to interval [-100, 100]
-                                    try {
-                                        Some(f.compute(x))
-                                    } catch {
-                                        case e: ArithmeticException => None
-                                    }
-                                } else {
-                                    None
-                                }
-                            })
+        if (functionComponents.length == 2) {
+            for {
+                variableName <- parseHead(functionComponents(0))
+                f <- parseBody(functionComponents(1), variableName)
+            } yield {
+                (x: Int) => {
+                    if (-100 <= x && x <= 100) {
+                        // Limit acceptable arguments to interval [-100, 100]
+                        try {
+                            Some(f.compute(x))
+                        } catch {
+                            case e: ArithmeticException => None
                         }
-                        case _ => None
+                    } else {
+                        None
                     }
                 }
-                case _ => None
             }
+        } else {
+            None
         }
     }
 }
