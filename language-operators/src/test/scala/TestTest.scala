@@ -56,12 +56,11 @@ class TestFunction extends FunSuite with Checkers {
         }
     }
 
-    val argumentNames = Gen.identifier.suchThat(!_.isEmpty)
-    val argumentValues = Gen.choose(-100, 100)
-    val nonZeroArgumentValues = argumentValues.suchThat(_ != 0)
-    val constants = Gen.choose(1, 10)
-
     test("Functions of all valid classes compute properly with valid inputs") {
+        val argumentNames = Gen.identifier.suchThat(!_.isEmpty)
+        val argumentValues = Gen.choose(-100, 100)
+        val nonZeroArgumentValues = argumentValues.suchThat(_ != 0)
+        val constants = Gen.choose(1, 10)
         val functions = Map(
             "(%var%: Int) => %var% % %const1% - %const2%" -> ((x: Int, c1: Int, c2: Int) => x % c1 - c2),
             "(%var%: Int) => %const1% % %var% - %const2%" -> ((x: Int, c1: Int, c2: Int) => c1 % x - c2),
