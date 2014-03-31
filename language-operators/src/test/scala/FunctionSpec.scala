@@ -5,58 +5,43 @@ import org.scalatest.prop.Checkers
 import org.scalacheck._
 import org.scalacheck.Prop.{forAll, BooleanOperators}
 
-class TestFunction extends FunSuite with Checkers {
-    test("correctly calculates function output") {
-        expect(Some(5)) {
-            val func = Function.parse("(x: Int) => 5 - x % x")
-            func.flatMap((f: (Int => Option[Int])) => f(17))
-        }
-        expect(Some(-6)) {
-            val func = Function.parse("(x: Int) => 1 - x % 10")
-            func.flatMap((f: (Int => Option[Int])) => f(17))
-        }
+class FunctionSpec extends FlatSpec with Matchers with Checkers {
+
+    "A Function" should "correctly calculate output with valid input" in {
+        val func = Function.parse("(x: Int) => 5 - x % x")
+        func.flatMap((f: (Int => Option[Int])) => f(17)) should be (Some(5))
     }
 
-    test("division by zero returns false") {
-        expect(None) {
-            val func = Function.parse("(x: Int) => 1 - x % x")
-            func.flatMap((f: (Int => Option[Int])) => f(0))
-        }
+    it should "return false on division by zero" in {
+        val f = Function.parse("(x: Int) => 1 - x % x")
+        f.flatMap((f: (Int => Option[Int])) => f(0)) should be (None)
     }
 
-    test("negative integer overflows are handled properly") {
-        expect(Some(2147483549)) {
-            val func = Function.parse("(x: Int) => x % 65535 - 2147483647")
-            func.flatMap((f: (Int => Option[Int])) => f(-100))
-        }
+    it should "handle integer overflows properly" in {
+        val f = Function.parse("(x: Int) => x % 65535 - 2147483647")
+        f.flatMap((f: (Int => Option[Int])) => f(-100)) should be (Some(2147483549))
     }
 
-    test("malformed function (missing `=>`) fails") {
-        expect(None) { Function.parse("(x: Int) = 1 - x % x") }
+    it should "return none if function is malformed" in {
+        Function.parse("(x: Int) = 1 - x % x") should be (None)
     }
 
-    test("does not accept arguments from (-inf, -100) U (100, inf)") {
-        expect(None) {
-            val func = Function.parse("(x: Int) => 1 - x % 10")
-            func.flatMap((f: (Int => Option[Int])) => f(-1000))
-        }
-        expect(None) {
-            val func = Function.parse("(x: Int) => 1 - x % 10")
-            func.flatMap((f: (Int => Option[Int])) => f(1000))
-        }
+    it should "not accept arguments from (-inf, -100) U (100, inf)" in {
+        val f = Function.parse("(x: Int) => 1 - x % 10")
+        f.flatMap((f: (Int => Option[Int])) => f(-1000)) should be (None)
+        f.flatMap((f: (Int => Option[Int])) => f(1000)) should be (None)
     }
 
-    test("verifies that no other variable names are used") {
-        expect(None) { Function.parse("(x: Int) => x - y % 10") }
+    it should "not accept undefined variables" in {
+        Function.parse("(x: Int) => x - y % 10") should be (None)
     }
 
-    test("arithmetic function order is correct") {
-        expect(Some(3)) {
-            Function.parse("(x: Int) => 4 - x % 2").flatMap((f: (Int => Option[Int])) => f(5))
-        }
+    it should "respect arithmetic function order" in {
+        Function.parse("(x: Int) => 4 - x % 2")
+            .flatMap((f: (Int => Option[Int])) => f(5)) should be (Some(3))
     }
 
-    test("Functions of all valid classes compute properly with valid inputs") {
+    "Functions of all valid classes" should "compute properly with valid inputs" in {
         val argumentNames = Gen.identifier.suchThat(!_.isEmpty)
         val argumentValues = Gen.choose(-100, 100)
         val nonZeroArgumentValues = argumentValues.suchThat(_ != 0)
