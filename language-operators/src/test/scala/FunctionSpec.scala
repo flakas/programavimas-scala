@@ -3,7 +3,8 @@ package languageops
 import org.scalatest._
 import org.scalatest.prop.Checkers
 import org.scalacheck._
-import org.scalacheck.Prop.{forAll, BooleanOperators}
+import org.scalacheck.Arbitrary._
+//import org.scalacheck.Prop.{forAll, BooleanOperators}
 
 class FunctionSpec extends FlatSpec with Matchers with Checkers {
 
@@ -41,34 +42,55 @@ class FunctionSpec extends FlatSpec with Matchers with Checkers {
         f(5) should be (Some(3))
     }
 
+    abstract class Op {
+        def compute(x: Int) : Int
+        override def toString() : String
+    }
+    case class Modulo(op1: Op, op2: Op) extends Op {
+        def compute(x: Int) = op1.compute(x) % op2.compute(x)
+        override def toString = op1.toString + " % " + op2.toString
+    }
+    case class Subtract(op1: Op, op2: Op) extends Op {
+        def compute(x: Int) = op1.compute(x) - op2.compute(x)
+        override def toString = op1.toString + " - " + op2.toString
+    }
+    case class Constant(c: Int) extends Op {
+        def compute(x: Int) = c
+        override def toString = c.toString
+    }
+    case class Argument() extends Op {
+        def compute(x: Int) = x
+        override def toString = "x"
+    }
+
+    implicit lazy val constantGenerator: Arbitrary[Constant] = Arbitrary {
+        for {
+            c <- Gen.choose(1, 10)
+        } yield Constant(c)
+    }
+
+    implicit lazy val functionGenerator: Arbitrary[Op] = Arbitrary {
+        for {
+            operationOrder <- arbitrary[Boolean]
+            constants <- Gen.containerOfN[List, Constant](3, arbitrary[Constant])
+            operands <- Gen.listOfN(3, arbitrary[Boolean]).suchThat((x: List[Boolean]) => x.contains(true) && x.contains(false))
+            ops = operands.zip(constants).map((x: (Boolean, Constant)) => if (x._1) Argument() else x._2)
+        } yield
+            if (operationOrder) {
+                Subtract(Modulo(ops(0), ops(1)), ops(2))
+            } else {
+                Subtract(ops(0), Modulo(ops(1), ops(2)))
+            }
+    }
+
     "Functions of all valid classes" should "compute properly with valid inputs" in {
-        val argumentNames = Gen.identifier.suchThat(!_.isEmpty)
-        val argumentValues = Gen.choose(-100, 100)
-        val nonZeroArgumentValues = argumentValues.suchThat(_ != 0)
-        val constants = Gen.choose(1, 10)
-        val functions = Map(
-            "(%var%: Int) => %var% % %const1% - %const2%" -> ((x: Int, c1: Int, c2: Int) => x % c1 - c2),
-            "(%var%: Int) => %const1% % %var% - %const2%" -> ((x: Int, c1: Int, c2: Int) => c1 % x - c2),
-            "(%var%: Int) => %const1% % %const2% - %var%" -> ((x: Int, c1: Int, c2: Int) => c1 % c2 - x),
-            "(%var%: Int) => %var% - %const1% % %const2%" -> ((x: Int, c1: Int, c2: Int) => x - c1 % c2),
-            "(%var%: Int) => %const1% - %var% % %const2%" -> ((x: Int, c1: Int, c2: Int) => c1 - x % c2),
-            "(%var%: Int) => %const1% - %const2% % %var%" -> ((x: Int, c1: Int, c2: Int) => c1 - c2 % x),
-            "(%var%: Int) => %var% % %var% - %const1%" -> ((x: Int, c1: Int, c2: Int) => x % x - c1),
-            "(%var%: Int) => %var% % %const1% - %var%" -> ((x: Int, c1: Int, c2: Int) => x % c1 - x),
-            "(%var%: Int) => %const1% % %var% - %var%" -> ((x: Int, c1: Int, c2: Int) => c1 % x - x),
-            "(%var%: Int) => %var% - %var% % %const1%" -> ((x: Int, c1: Int, c2: Int) => x - x % c1),
-            "(%var%: Int) => %var% - %const1% % %var%" -> ((x: Int, c1: Int, c2: Int) => x - c1 % x),
-            "(%var%: Int) => %const1% - %var% % %var%" -> ((x: Int, c1: Int, c2: Int) => c1 - x % x)
-        )
-        check(Prop.forAll(argumentNames, constants, constants, nonZeroArgumentValues, Gen.oneOf(functions.keys.toSeq)) {
-            (arg: String, c1: Int, c2: Int, param: Int, functionTemplate: String) => {
-                val functionText = functionTemplate
-                    .replaceAll("%var%", arg)
-                    .replaceAll("%const1%", c1.toString)
-                    .replaceAll("%const2%", c2.toString)
-                val testFunction = functions(functionTemplate)
-                val f = Function.parse(functionText).get
-                f(param) == Some(testFunction(param, c1, c2))
+
+        val nonZeroArgumentValues = Gen.choose(-100, 100).suchThat(_ != 0)
+
+        check(Prop.forAll(arbitrary[Op], nonZeroArgumentValues) {
+            (func: Op, param: Int) => {
+                val f = Function.parse("(x: Int) => " + func.toString).get
+                f(param) == Some(func.compute(param))
             }
         })
     }
