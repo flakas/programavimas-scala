@@ -73,9 +73,6 @@ class FunctionSpec extends FlatSpec with Matchers with Checkers {
     }
 
     "Functions of all valid classes" should "compute properly with valid inputs" in {
-
-        val nonZeroArgumentValues = Gen.choose(-100, 100).suchThat(_ != 0)
-
         check(Prop.forAll {
             (func: Op, param: NonZeroArgument) => {
                 val f = Function.parse("(x: Int) => " + func.toString).get
