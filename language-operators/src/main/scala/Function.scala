@@ -2,18 +2,23 @@ package languageops
 
 abstract class Op {
     def compute(x: Int) : Int
+    override def toString : String
 }
 case class Var(name: String) extends Op {
     def compute(x: Int) = x
+    override def toString : String = name
 }
 case class Constant(value: String) extends Op {
     def compute(x: Int) = value.toInt
+    override def toString : String = value
 }
 case class Modulo(op1: Op, op2: Op) extends Op {
     def compute(x: Int) = op1.compute(x) % op2.compute(x)
+    override def toString : String = op1 + " % " + op2
 }
 case class Subtract(op1: Op, op2: Op) extends Op {
     def compute(x: Int) = op1.compute(x) - op2.compute(x)
+    override def toString : String = op1 + " - " + op2
 }
 
 object Function {
