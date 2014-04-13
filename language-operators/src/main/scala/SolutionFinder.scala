@@ -39,6 +39,18 @@ class SolutionFinder {
                 Subtract(ops(0), Modulo(ops(1), ops(2)))
         }
     }
-    def findSolutions(knownValues: List[(Int, Int)]): Stream[Op] =
-        functions.filter(f => knownValues.forall(v => f.compute(v._1) == v._2))
+    def findSolutions(knownValues: List[(Int, Option[Int])]): Stream[Op] =
+        functions.filter(f =>
+                knownValues.forall(v => {
+                    try {
+                        if (v._2.isEmpty) {
+                            f.compute(v._1)
+                            false
+                        } else {
+                            f.compute(v._1) == v._2.get
+                        }
+                    } catch {
+                        case e: ArithmeticException => v._2.isEmpty
+                    }
+                }))
 }

@@ -8,20 +8,27 @@ import org.scalacheck.Arbitrary._
 
 class SolutionFinderSpec extends FlatSpec with Checkers with Matchers {
 
-    class NonZeroArgument(x: Int) {
+    class Argument(x: Int) {
         def get = x
         override def toString = x.toString
     }
 
-    class Sampler(f: Op, args: List[NonZeroArgument]) {
-        def getSamples = args.map(x => (x.get, f.compute(x.get)))
+    class Sampler(f: Op, args: List[Argument]) {
+        def getSamples = args.map(x => {
+            val xValue = x.get
+            try {
+                (xValue, Some(f.compute(xValue)))
+            } catch {
+                case e: ArithmeticException => (xValue, None)
+            }
+        })
         override def toString = "Sampler(" + f + " " + getSamples + ")"
     }
 
-    implicit lazy val nonZeroArgumentGenerator: Arbitrary[NonZeroArgument] = Arbitrary {
+    implicit lazy val nonZeroArgumentGenerator: Arbitrary[Argument] = Arbitrary {
         for {
-            c <- Gen.choose(-100, 100).suchThat(_ != 0)
-        } yield new NonZeroArgument(c)
+            c <- Gen.choose(-100, 100)
+        } yield new Argument(c)
     }
 
     implicit lazy val constantGenerator: Arbitrary[Constant] = Arbitrary {
@@ -47,12 +54,28 @@ class SolutionFinderSpec extends FlatSpec with Checkers with Matchers {
     implicit lazy val functionsWithSampledValues: Arbitrary[(Op, Sampler)] = Arbitrary {
         for {
             f <- arbitrary[Op]
-            arguments <- arbitrary[List[NonZeroArgument]]
+            arguments <- arbitrary[List[Argument]]
             args = arguments
         } yield (f, new Sampler(f, args))
     }
 
-    "Solution finder" should "always have the target function as a result" in {
+    "Solution finder" should "generate all valid types of constants" in {
+        check(Prop.forAll {
+            (constant: Constant) => {
+                (new SolutionFinder).constants.contains(constant)
+            }
+        })
+    }
+
+    it should "generate all valid functions" in {
+        check(Prop.forAll {
+            (function: Op) => {
+                (new SolutionFinder).functions.contains(function)
+            }
+        })
+    }
+
+    it should "always have the target function as a result" in {
         check(Prop.forAll {
             (params: (Op, Sampler)) => {
                 val finder = new SolutionFinder
