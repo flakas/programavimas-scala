@@ -11,6 +11,6 @@ object Main extends App {
             //case _ => println("Failed to parse the function")
         //}
     //}
-    val s = new Solver(7, 50, "Mah0ueCaGoo1aith")
+    val s = new Solver(new RemoteChallengeVerifier(7, 50, "Mah0ueCaGoo1aith"))
     println(s.solve)
 }
