@@ -1,0 +1,6 @@
+language: scala
+scala:
+    - 2.10.3
+before_script:
+    - cd language-operators
+script: sbt ++$TRAVIS_SCALA_VERSION test

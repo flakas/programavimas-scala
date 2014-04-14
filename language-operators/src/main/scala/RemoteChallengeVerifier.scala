@@ -4,10 +4,10 @@ import scala.concurrent.duration._
 import dispatch._, Defaults._
 
 class RemoteChallengeVerifier(lang: Int, challengeId: Int, token: String) extends ChallengeVerifier {
-    //val challengeHost = "guess.homedir.eu"
-    //val address = host(challengeHost) / "lang" / lang / "challenge" / challengeId
-    val challengeHost = "localhost"
-    val address = host(challengeHost) / "scalaguess" / "index.php"
+    val challengeHost = "guess.homedir.eu"
+    val address = host(challengeHost) / "lang" / lang / "challenge" / challengeId
+    //val challengeHost = "localhost"
+    //val address = host(challengeHost) / "scalaguess" / "index.php"
 
     def sample(arg: Int): Option[Int] = {
         val request = address
