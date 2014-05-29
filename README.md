@@ -1,4 +1,4 @@
-Programavimas Scala 2014
+Scala programming class 2014
 ===========
 
 Language operators build status:
